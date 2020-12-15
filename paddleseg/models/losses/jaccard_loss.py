@@ -9,16 +9,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import paddle
 from paddle import nn
+import paddle.nn.functional as F
 
 from paddleseg.cvlibs import manager
 from .iou import compute_predictions_iou
 
 
 @manager.LOSSES.add_component
-class DiceLoss(nn.Layer):
+class JaccardLoss(nn.Layer):
     """
-    Implements the dice loss function.
+    Implements the tversky loss function.
 
     Args:
         ignore_index (int64): Specifies a target value that is ignored
@@ -26,11 +28,12 @@ class DiceLoss(nn.Layer):
     """
 
     def __init__(self, ignore_index=255):
-        super(DiceLoss, self).__init__()
+        super(JaccardLoss, self).__init__()
         self.ignore_index = ignore_index
         self.eps = 1e-5
 
     def forward(self, logits, labels):
         intersection, cardinality = compute_predictions_iou(logits, labels, self.ignore_index)
-        dice_loss = (2. * intersection / (cardinality + self.eps)).mean()
-        return 1 - dice_loss
+        union = cardinality - intersection
+        jacc_loss = (intersection / (union + self.eps)).mean()
+        return 1 - jacc_loss
